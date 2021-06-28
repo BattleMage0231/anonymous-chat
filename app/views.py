@@ -1,22 +1,11 @@
-from flask import *
-from flask_socketio import *
-from flask_sqlalchemy import *
+from flask import redirect, render_template, request
+from flask_socketio import emit, close_room, join_room, leave_room, rooms
 
-import time
 import uuid
+import time
 
-app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret_key'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////database.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-
-db = SQLAlchemy(app)
-socketio = SocketIO(app)
-
-class Room(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    key = db.Column(db.String(120), unique=True, nullable=False)
-    size = db.Column(db.Integer, nullable=False)
+from app import app, db, socketio
+from app.models import Room
 
 @app.route('/')
 def home():
@@ -86,6 +75,3 @@ def send(data):
     msg = data['msg']
     timestamp = data['timestamp']
     emit('message', {'content': msg, 'timestamp': timestamp}, room=room)
-
-db.create_all()
-socketio.run(app, debug=True)
