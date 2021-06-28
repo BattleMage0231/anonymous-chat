@@ -5,6 +5,15 @@
         <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.0/dist/js/bootstrap.min.js" integrity="sha384-+YQ4JLhjyBLPDQt//I+STsc9iw4uQqACwlvpslubQzn4u2UU2UFM80nGisd026JF" crossorigin="anonymous"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/markdown-it/12.0.6/markdown-it.min.js" integrity="sha512-7U8vY7c6UQpBNQOnBg3xKX502NAckvk70H1nWvh6W7izA489jEz+RCN3ntT1VMdXewaSKkOrEBegp/h6SPXrjw==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js" integrity="sha512-q/dWJ3kcmjBLU4Qc47E4A9kTB4m3wuTY7vkFJDTZKjTs8jhyGQnaUrxa0Ytd0ssMZhbNua9hE+E7Qv1j+DyZwA==" crossorigin="anonymous"></script>
+        <style>
+            .message {
+                padding-left: 15px;
+                padding-right: 15px;
+                padding-top: 10px;
+                margin-bottom: 10px;
+                overflow: hidden;
+            }
+        </style>
     </head>
     <body>
         <div class="container">
@@ -16,7 +25,6 @@
             <button class="btn btn-danger" onclick="leave()">Leave</button>
             <div class="mb-3"></div>
         </div>
-        <!-- socket stuff -->
         <script>
             var md = window.markdownit().set({html: false});
 
@@ -29,15 +37,15 @@
                 socket.on('message', msg => {
                     let rendered = md.render(msg.content);
                     let time = new Date(msg.timestamp).toLocaleTimeString('en-US');
-                    $('#chat').append(`<div style="background-color: lightblue;  padding-left: 15px; padding-right: 15px; padding-top: 10px; margin-bottom: 10px; overflow: hidden;"><p><b>Someone said (${time}):</b></p> ${rendered}</div>`);
+                    $('#chat').append(`<div class="message" style="background-color: lightblue;"><p><b>Someone said (${time}):</b></p> ${rendered}</div>`);
                 });
                 socket.on('welcome', msg => {
                     let time = new Date(msg.timestamp).toLocaleTimeString('en-US');
-                    $('#chat').append(`<div style="background-color: lightgreen;padding-left: 15px; padding-right: 15px; padding-top: 10px; margin-bottom: 10px; overflow: hidden;"><p><b>Someone joined the room at ${time}.</b></p></div>`);
+                    $('#chat').append(`<div class="message" style="background-color: lightgreen;"><p><b>Someone joined the room at ${time}.</b></p></div>`);
                 });
                 socket.on('goodbye', msg => {
                     let time = new Date(msg.timestamp).toLocaleTimeString('en-US');
-                    $('#chat').append(`<div style="background-color: pink; padding-left: 15px; padding-right: 15px; padding-top: 10px; margin-bottom: 10px; overflow: hidden;"><p><b>Someone left the room at ${time}.</b></p></div>`);
+                    $('#chat').append(`<div class="message" style="background-color: pink;"><p><b>Someone left the room at ${time}.</b></p></div>`);
                 });
                 socket.on('purge', msg => {
                     if(msg.room == "{{room}}") {
@@ -47,22 +55,19 @@
 
                 $('#input').keypress(event => {
                     if(event.key == 'Enter') {
-                        if(!event.repeat) {
-                            submit();
-                        }
+                        submit();
                     }
                 });
             });
 
             function submit() {
                 let message = $('#input').val();
-                if(message == '') {
-                    return;
+                if(message !== '') {
+                    $('#input').val('');
+                    socket.emit('send', {
+                        room: '{{room}}', msg: message, timestamp: Date.now() 
+                    });
                 }
-                $('#input').val('');
-                socket.emit('send', 
-                    {room: '{{room}}', msg: message, timestamp: Date.now()}
-                );
             }
 
             function leave() {
