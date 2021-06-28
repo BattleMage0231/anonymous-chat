@@ -13,61 +13,69 @@ def home():
 
 @app.route('/create/')
 def create():
+    # generate a key
     key = str(uuid.uuid4())
     while Room.query.filter_by(key=key).all():
         key = str(uuid.uuid4())
+    # create the room
     room = Room(key=key, size=0)
     db.session.add(room)
     db.session.commit()
+    # redirect to room page
     return redirect(f'/room/{key}')
 
 @app.route('/join/', methods=['GET', 'POST'])
 def join():
     if request.method == 'POST':
+        # redirect to room page
         code = request.form['code'].strip()
-        if Room.query.filter_by(key=code).all():
-            return redirect(f'/room/{code}/')
-        else:
-            return redirect('/')
+        return redirect(f'/room/{code}/')
     else:
         return render_template('join.html')
 
 @app.route('/room/<key>/')
 def room(key):
+    # check room exists
     if Room.query.filter_by(key=key):
         return render_template('room.html', room=key)
     else:
-        return 'Room not found'
+        return redirect('/')
 
 @socketio.on('joined')
 def joined(data):
     key = data['room']
+    # query the room
     res = Room.query.filter_by(key=key).all()
     if len(res) == 0:
+        # the room doesn't exist, so purge all instances of it
         emit('purge', {'room': key})
         return
+    # join the room
     room = res[0]
     room.size += 1
     db.session.commit()
     join_room(key)
+    # welcome event
     emit('welcome', {'timestamp': int(time.time() * 1000)}, to=key)
 
 @socketio.on('disconnect')
 def left():
+    # find the room the user is it
     for key in rooms():
         res = Room.query.filter_by(key=key).all()
         if res:
+            # if this room exists
             room = res[0]
-            print(room)
             room.size -= 1
             if room.size == 0:
+                # room is empty
                 db.session.delete(room)
                 close_room(key)
             else:
                 leave_room(key)
+                # goodbye event
                 emit('goodbye', {'timestamp': int(time.time() * 1000)}, to=key)
             db.session.commit()
-    print(Room.query.all())
 
 @socketio.on('send')
 def send(data):

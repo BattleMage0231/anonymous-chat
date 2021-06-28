@@ -26,50 +26,60 @@
             <div class="mb-3"></div>
         </div>
         <script>
+            // markdown rendering
             var md = window.markdownit().set({html: false});
 
+            // socketIO
             var socket;
             $(document).ready(() => {
                 socket = io();
+                // send join message to server on connect
                 socket.on('connect', () => {
                     socket.emit('joined', {room: '{{room}}'});
                 });
+                // display message on receive
                 socket.on('message', msg => {
                     let rendered = md.render(msg.content);
                     let time = new Date(msg.timestamp).toLocaleTimeString('en-US');
                     $('#chat').append(`<div class="message" style="background-color: lightblue;"><p><b>Someone said (${time}):</b></p> ${rendered}</div>`);
                 });
+                // display welcome message
                 socket.on('welcome', msg => {
                     let time = new Date(msg.timestamp).toLocaleTimeString('en-US');
                     $('#chat').append(`<div class="message" style="background-color: lightgreen;"><p><b>Someone joined the room at ${time}.</b></p></div>`);
                 });
+                // display goodbye message
                 socket.on('goodbye', msg => {
                     let time = new Date(msg.timestamp).toLocaleTimeString('en-US');
                     $('#chat').append(`<div class="message" style="background-color: pink;"><p><b>Someone left the room at ${time}.</b></p></div>`);
                 });
+                // redirect if the room no longer exists (invalid join)
                 socket.on('purge', msg => {
-                    if(msg.room == "{{room}}") {
+                    if(msg.room === "{{room}}") {
                         window.location.href = '/';
                     };
                 });
-
+                // press enter to submit
                 $('#input').keypress(event => {
-                    if(event.key == 'Enter') {
+                    if(event.key === 'Enter') {
                         submit();
                     }
                 });
             });
 
+            // send a message
             function submit() {
                 let message = $('#input').val();
                 if(message !== '') {
                     $('#input').val('');
+                    // send the message to server
                     socket.emit('send', {
                         room: '{{room}}', msg: message, timestamp: Date.now() 
                     });
                 }
             }
 
+            // return to the main page
             function leave() {
                 window.location.href = '/';
             }
